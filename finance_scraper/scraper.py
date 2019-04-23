@@ -1,4 +1,7 @@
 import sys
+import csv
+import time
+import pandas
 from yahoo_quote_download.yahoo_quote_download import yqd
 
 def get_data(tickers):
@@ -6,13 +9,21 @@ def get_data(tickers):
     end = '20190101'
 
     responses = []
+    written_header = False
 
     for t in tickers:
+        # Remove the trailing newline
         cleaned = t[:-1]
-        responses.append(yqd.load_yahoo_quote(cleaned, start, end))
+        response = yqd.load_yahoo_quote(cleaned, start, end, format_output='dataframe')
+        ticker_col = [cleaned] * response.shape[0]
+        response['ticker'] = ticker_col
+        responses.append(response)
 
-    print(len(responses))
-    return responses
+        # Insert delay to be nice
+        time.sleep(0.1)
+
+    return pandas.concat(responses)
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -20,4 +31,5 @@ if __name__ == '__main__':
         sys.exit()
 
     ticker_file = open(sys.argv[1], 'r')
-    print(get_data(ticker_file))
+    data = get_data(ticker_file)
+    data.to_csv(path_or_buf='output.csv', index=False)
