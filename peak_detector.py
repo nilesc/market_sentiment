@@ -24,11 +24,11 @@ if __name__ == '__main__':
     all_companies = [company for company in os.listdir(tweets_directory)
                      if os.path.isdir(os.path.join(tweets_directory, company))]
 
-    volumes = []
+    volumes = {}
 
     for company in all_companies:
         company_dir = os.path.join(tweets_directory, company)
-        volumes.append(get_volume(company_dir))
+        volumes[company] = get_volume(company_dir)
 
     print(f'Total number of companies: {len(volumes)}')
-    print(f'Number with full representation: {sum([1 for volume in volumes if len(volume) == 364])}')
+    print(f'Number with full representation: {sum([1 for volume in volumes if len(volumes[volume]) == 364])}')
