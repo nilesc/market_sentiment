@@ -6,6 +6,7 @@ import statistics
 
 relevant_year = 2018
 
+
 def get_volume(company_path):
     all_days = {}
 
