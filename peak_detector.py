@@ -4,12 +4,13 @@ import sys
 from datetime import date, timedelta
 import statistics
 
+relevant_year = 2018
 
 def get_volume(company_path):
     all_days = {}
 
-    start_date = date(2018, 1, 1)
-    end_date = date(2019, 1, 1)
+    start_date = date(relevant_year, 1, 1)
+    end_date = date(relevant_year + 1, 1, 1)
     difference = end_date - start_date
 
     for num_days in range(difference.days):
@@ -23,13 +24,16 @@ def get_volume(company_path):
         for row in reader:
             # We know that date is in row 1
             row_date, _ = row[date_index].split(' ')
-            if row_date[3] == '7':
-                print('2017 tweet, discarding...')
+            row_year = row_date[0:4]
+
+            if row_year != str(relevant_year):
+                print(f'{row_year} tweet, discarding...')
                 continue
 
             all_days[row_date] += 1
 
     return [all_days[day] for day in sorted(all_days.keys())]
+
 
 def get_peaks(volumes, window_width, threshold):
     peaks = []
@@ -65,7 +69,8 @@ if __name__ == '__main__':
 
     tweets_directory = sys.argv[1]
     all_companies = [company for company in os.listdir(tweets_directory)
-                     if os.path.isfile(os.path.join(tweets_directory, company))]
+                     if os.path.isfile(os.path.join(tweets_directory,
+                                                    company))]
 
     window_width = 5
     threshold = 2
