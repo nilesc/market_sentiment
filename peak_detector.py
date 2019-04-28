@@ -5,17 +5,31 @@ from datetime import date, timedelta
 import statistics
 
 
-def get_volume(company_dir):
-    all_days = sorted(os.listdir(company_dir))
-    tweet_volume = []
-    for day in all_days:
-        day_path = os.path.join(company_dir, day)
-        with open(day_path, 'r') as f:
-            reader = csv.reader(f)
-            day_volume = sum([1 for row in reader])
-            tweet_volume.append(day_volume)
-    return tweet_volume
+def get_volume(company_path):
+    all_days = {}
 
+    start_date = date(2018, 1, 1)
+    end_date = date(2019, 1, 1)
+    difference = end_date - start_date
+
+    for num_days in range(difference.days):
+        new_day = start_date + timedelta(days=num_days)
+        as_string = new_day.strftime('%Y-%m-%d')
+        all_days[as_string] = 0
+
+    with open(company_path, 'r') as f:
+        reader = csv.reader(f)
+        date_index = next(reader).index('date')
+        for row in reader:
+            # We know that date is in row 1
+            row_date, _ = row[date_index].split(' ')
+            if row_date[3] == '7':
+                print('2017 tweet, discarding...')
+                continue
+
+            all_days[row_date] += 1
+
+    return [all_days[day] for day in sorted(all_days.keys())]
 
 def get_peaks(volumes, window_width, threshold):
     peaks = []
@@ -43,6 +57,7 @@ def numbers_to_dates(first_day, peaks):
 
     return dates
 
+
 if __name__ == '__main__':
     if len(sys.argv) is not 2:
         print('Requires a path to the tweet directory')
@@ -50,7 +65,7 @@ if __name__ == '__main__':
 
     tweets_directory = sys.argv[1]
     all_companies = [company for company in os.listdir(tweets_directory)
-                     if os.path.isdir(os.path.join(tweets_directory, company))]
+                     if os.path.isfile(os.path.join(tweets_directory, company))]
 
     window_width = 5
     threshold = 2
@@ -60,10 +75,7 @@ if __name__ == '__main__':
 
     for company in all_companies:
         print(f'Data for {company}')
-        company_dir = os.path.join(tweets_directory, company)
-        volumes[company] = get_volume(company_dir)
+        company_path = os.path.join(tweets_directory, company)
+        volumes[company] = get_volume(company_path)
         peaks = get_peaks(volumes[company], window_width, threshold)
         print(numbers_to_dates(first_day, peaks))
-
-    print(f'Total number of companies: {len(volumes)}')
-    print(f'Number with full representation: {sum([1 for volume in volumes if len(volumes[volume]) == 364])}')
