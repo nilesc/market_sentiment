@@ -3,6 +3,7 @@ import csv
 import sys
 from datetime import date, timedelta
 import statistics
+from peak_sentiment import get_sentiment_of_peaks
 
 relevant_year = 2018
 
@@ -16,7 +17,7 @@ def get_volume(company_path):
 
     for num_days in range(difference.days):
         new_day = start_date + timedelta(days=num_days)
-        as_string = new_day.strftime('%Y-%m-%d')
+        as_string = str(new_day)
         all_days[as_string] = 0
 
     with open(company_path, 'r') as f:
@@ -27,8 +28,8 @@ def get_volume(company_path):
             row_date, _ = row[date_index].split(' ')
             row_year = row_date[0:4]
 
+            # Ignore tweets from outside the range we're looking at
             if row_year != str(relevant_year):
-                print(f'{row_year} tweet, discarding...')
                 continue
 
             all_days[row_date] += 1
@@ -63,12 +64,33 @@ def numbers_to_dates(first_day, peaks):
     return dates
 
 
-if __name__ == '__main__':
-    if len(sys.argv) is not 2:
-        print('Requires a path to the tweet directory')
-        sys.exit()
+def parse_finance_data(finance_path):
+    all_data = {}
 
-    tweets_directory = sys.argv[1]
+    with open(finance_path, 'r') as f:
+        reader = csv.reader(f)
+        header = next(reader)
+
+        ticker_index = header.index('ticker')
+        close_index = header.index('Close')
+        date_index = header.index('Date')
+
+        for row in reader:
+            ticker = row[ticker_index]
+            close = row[close_index]
+            date = row[date_index]
+
+            if ticker not in all_data:
+                all_data[ticker] = {}
+
+            all_data[ticker][date] = close
+
+    return all_data
+
+
+def get_all_volume_peaks(tweets_directory, finance_path):
+    finance_data = parse_finance_data(finance_path)
+
     all_companies = [company for company in os.listdir(tweets_directory)
                      if os.path.isfile(os.path.join(tweets_directory,
                                                     company))]
@@ -80,8 +102,17 @@ if __name__ == '__main__':
     first_day = '2018-01-01'
 
     for company in all_companies:
-        print(f'Data for {company}')
         company_path = os.path.join(tweets_directory, company)
         volumes[company] = get_volume(company_path)
         peaks = get_peaks(volumes[company], window_width, threshold)
-        print(numbers_to_dates(first_day, peaks))
+        sentiments = get_sentiment_of_peaks(company_path, peaks)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) is not 3:
+        print('Requires a path to the tweet directory and finance file')
+        sys.exit()
+
+    tweets_directory = sys.argv[1]
+    finance_path = sys.argv[2]
+    get_all_volume_peaks(tweets_directory, finance_path)
