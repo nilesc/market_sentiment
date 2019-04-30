@@ -19,9 +19,10 @@ def get_sentiment_of_peaks(company_path, peaks):
         date_index = header_row.index('date')
         emoji_index = header_row.index('emojis')
 
+        company_sentiments = {}
 
         for row in reader:
-            tweet_date = row[date_index]
+            tweet_date = row[date_index].split(' ')[0]
             emojis = row[emoji_index]
 
             tweet_sentiment = 0

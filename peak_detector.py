@@ -1,11 +1,43 @@
 import os
 import csv
 import sys
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import statistics
 from peak_sentiment import get_sentiment_of_peaks
+import matplotlib.pyplot as plt
+from scipy.stats import linregress
 
 relevant_year = 2018
+
+company_to_ticker = {'3M.csv': 'MMM',
+        'Chevron.csv': 'CVX',
+        'GoldmanSachs.csv': 'GS',
+        'Merck.csv': 'MRK',
+        'UTC.csv': 'UTX',
+        'exxonmobil.csv': 'XOM',
+        'AmericanExpress.csv': 'AXP',
+        'Cisco.csv': 'CSCO',
+        'HomeDepot.csv': 'HD',
+        'Microsoft.csv': 'MSFT',
+        'UnitedHealthGrp.csv': 'UNH',
+        'intel.csv': 'INTC',
+        'Apple.csv': 'AAPL',
+        'CocaCola.csv': 'KO',
+        'IBM.csv': 'IBM',
+        'Nike.csv': 'NKE',
+        'Visa.csv': 'V',
+        'pfizer.csv': 'PFE',
+        'Boeing.csv': 'BA',
+        'Disney.csv': 'DIS',
+        'JNJNews.csv': 'JNJ',
+        'ProcterGamble.csv': 'PG',
+        'Walgreens.csv': 'WBA',
+        'verizon.csv': 'VZ',
+        'Chase.csv': 'JPM',
+        'DowDuPontCo.csv': 'DWDP',
+        'McDonalds.csv': 'MCD',
+        'Travelers.csv': 'TRV',
+        'Walmart.csv': 'WMT'}
 
 
 def get_volume(company_path):
@@ -47,21 +79,25 @@ def get_peaks(volumes, window_width, threshold):
         if volumes[day_index] > threshold * median:
             peaks.append(day_index)
 
-    return peaks
+    return numbers_to_dates(peaks)
 
 
-def numbers_to_dates(first_day, peaks):
-    year, month, day = first_day.split('-')
-    beginning = date(int(year), int(month), int(day))
+def numbers_to_dates(peaks):
+    beginning = date(relevant_year, 1, 1)
     dates = []
 
     for peak in peaks:
         offset = timedelta(days=peak)
         new_date = beginning + offset
-        as_string = f'{new_date.year}-{new_date.month}-{new_date.day}'
+        as_string = str(new_date)
         dates.append(as_string)
 
     return dates
+
+
+def string_to_date(string):
+    as_datetime = datetime.strptime(string, '%Y-%m-%d')
+    return as_datetime.date()
 
 
 def parse_finance_data(finance_path):
@@ -88,6 +124,38 @@ def parse_finance_data(finance_path):
     return all_data
 
 
+def get_returns_for_dates(finance_data, company, dates):
+    returns = {}
+    company_data = finance_data[company]
+    for peak_date in dates:
+        as_date_object = string_to_date(peak_date)
+        one_day_past = timedelta(days=-1)
+        previous = as_date_object + one_day_past
+        previous = str(previous)
+        if peak_date not in company_data or previous not in company_data:
+            continue
+        day_return = float(company_data[peak_date]) / float(company_data[previous])
+
+        returns[peak_date] = day_return
+
+    return returns
+
+
+def join_sentiments_and_returns(sentiments, returns):
+    outputs = []
+    for key in sentiments:
+        if key not in returns:
+            continue
+        outputs.append((sentiments[key], returns[key]))
+    return outputs
+
+
+def linear_regression_p_value(points):
+    x, y = zip(*points)
+    _, _, _, p_value, _ = linregress(x, y)
+    return p_value
+
+
 def get_all_volume_peaks(tweets_directory, finance_path):
     finance_data = parse_finance_data(finance_path)
 
@@ -101,11 +169,20 @@ def get_all_volume_peaks(tweets_directory, finance_path):
     volumes = {}
     first_day = '2018-01-01'
 
+    scatter_points = {}
+
     for company in all_companies:
+        ticker = company_to_ticker[company]
         company_path = os.path.join(tweets_directory, company)
         volumes[company] = get_volume(company_path)
         peaks = get_peaks(volumes[company], window_width, threshold)
         sentiments = get_sentiment_of_peaks(company_path, peaks)
+        returns = get_returns_for_dates(finance_data, ticker, peaks)
+        outputs = join_sentiments_and_returns(sentiments, returns)
+        scatter_points[ticker] = outputs
+
+    for company in scatter_points:
+        print(linear_regression_p_value(scatter_points[company]))
 
 
 if __name__ == '__main__':
