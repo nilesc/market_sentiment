@@ -1,5 +1,10 @@
 Extracting twitter spikes:
 My first approach is as follows:
-1) Extract the number of tweets per day at each company
-2) Convert this into a series
-3) Apply the sliding scale approach as described in Ranco et al.
+    1) Extract the number of tweets per day at each company
+    2) Convert this into a series
+    3) Extract peaks as described by ranco
+    4) Join this with market data for the corresponding days
+    5) Apply a linear regression
+Found nothing significant
+
+Next, try modifying the approach to better match Ranco.
