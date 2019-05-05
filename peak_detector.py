@@ -76,7 +76,8 @@ def get_peaks(volumes, window_width, threshold):
         day_index = i + window_width
         window = volumes[i:day_index+window_width+1]
         median = statistics.median(window)
-        if volumes[day_index] > threshold * median:
+        if volumes[day_index] - median > threshold * max(median, 10):
+        # if volumes[day_index] > threshold * median:
             peaks.append(day_index)
 
     return numbers_to_dates(peaks)
@@ -134,7 +135,8 @@ def get_returns_for_dates(finance_data, company, dates):
         previous = str(previous)
         if peak_date not in company_data or previous not in company_data:
             continue
-        day_return = float(company_data[peak_date]) / float(company_data[previous])
+        difference = float(company_data[peak_date]) - float(company_data[previous])
+        day_return = difference / float(company_data[previous])
 
         returns[peak_date] = day_return
 
@@ -151,6 +153,8 @@ def join_sentiments_and_returns(sentiments, returns):
 
 
 def linear_regression_p_value(points):
+    if not points or len(points) == 1:
+        return None
     x, y = zip(*points)
     _, _, _, p_value, _ = linregress(x, y)
     return p_value
@@ -182,7 +186,12 @@ def get_all_volume_peaks(tweets_directory, finance_path):
         scatter_points[ticker] = outputs
 
     for company in scatter_points:
-        print(linear_regression_p_value(scatter_points[company]))
+        all_points = scatter_points[company]
+        # print(f'For {company}: {linear_regression_p_value(all_points)} across {len(all_points)} values')
+        if len(all_points) < 3:
+            print(f'{company} & - \\\\')
+        else:
+            print(f'{company} & {linear_regression_p_value(all_points):.3f} \\\\')
 
 
 if __name__ == '__main__':
